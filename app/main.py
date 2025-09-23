@@ -17,13 +17,6 @@ def main(argv: Optional[list[str]] = None) -> int:
         default="generic",
         help="Type of memory (e.g., semantic, episodic, etc.)",
     )
-    ingest_parser.add_argument(
-        "--model",
-        dest="model_name",
-        type=str,
-        default="all-MiniLM-L6-v2",
-        help="SentenceTransformers model to use for embeddings",
-    )
 
     search_parser = subparsers.add_parser("search", help="Search memories with KNN")
     search_parser.add_argument("query", type=str, help="Search query text")
@@ -35,22 +28,15 @@ def main(argv: Optional[list[str]] = None) -> int:
         default=None,
         help="Optional type filter (e.g., semantic, episodic)",
     )
-    search_parser.add_argument(
-        "--model",
-        dest="model_name",
-        type=str,
-        default="all-MiniLM-L6-v2",
-        help="SentenceTransformers model to use for query embeddings",
-    )
 
     args = parser.parse_args(argv)
 
     if args.command == "ingest":
-        key = ingest_memory(snippet=args.snippet, memory_type=args.memory_type, model_name=args.model_name)
+        key = ingest_memory(snippet=args.snippet, memory_type=args.memory_type)
         print(key)
         return 0
     if args.command == "search":
-        results = search_memories(query=args.query, k=args.k, memory_type=args.memory_type, model_name=args.model_name)
+        results = search_memories(query=args.query, k=args.k, memory_type=args.memory_type)
         import json as _json
         print(_json.dumps(results, indent=2))
         return 0

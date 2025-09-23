@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     redis_port: int = Field(default=6379, alias="REDIS_PORT")
     redis_username: Optional[str] = Field(default=None, alias="REDIS_USERNAME")
     redis_password: Optional[str] = Field(default=None, alias="REDIS_PASSWORD")
+    
+    google_api_key: Optional[str] = Field(default=None, alias="GOOGLE_API_KEY")
 
     model_config = SettingsConfigDict(
         env_file=".env",

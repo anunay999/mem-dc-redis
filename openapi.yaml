@@ -1,0 +1,32 @@
+openapi: 3.0.3
+info:
+  title: Memory Vector Store Schema
+  version: "0.1.0"
+  description: |
+    Schema describing memory items stored in the Redis vector index `memories`.
+    Embeddings are generated via Gemini (`models/gemini-embedding-001`) and stored as float32 vectors.
+servers: []
+paths: {}
+components:
+  schemas:
+    Memory:
+      type: object
+      required: [id, text, type, created_at]
+      properties:
+        id:
+          type: string
+          description: Unique key for the memory item in Redis.
+          example: memories:f1e788ee61fe410daa8ef941dd166223
+        text:
+          type: string
+          description: Raw memory content.
+          example: Alice likes hiking on weekends.
+        type:
+          type: string
+          description: Memory classification label.
+          example: semantic
+        created_at:
+          type: string
+          format: date-time
+          description: Unix epoch seconds for when the memory was created/ingested.
+          example: 1727049600
