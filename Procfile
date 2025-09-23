@@ -1,0 +1,1 @@
+web: fastapi run app/api.py --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-1}

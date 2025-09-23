@@ -1,0 +1,226 @@
+openapi: 3.0.1
+info:
+  title: Memory API
+  description: API to ingest memory texts into a Redis vector index and search them.
+  version: 0.1.0
+
+x-sfdc:
+  agent:
+    topic:
+      classificationDescription: This API allows agents to ingest and search memory texts for retrieval.
+      scope: Your job is to accept user-provided memory texts and store or search them.
+      instructions:
+        - If the user wants to store memories, collect the memory text(s) and call the ingestion endpoint.
+        - If the user wants to retrieve memories, collect the query and call the search endpoint.
+        - Do not request additional fields; configuration is handled server-side.
+      name: memory_api
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+tags:
+  - name: Health
+    description: Health and diagnostics
+  - name: Memories
+    description: Endpoints for ingesting and searching memories
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns API health status and configured Redis host.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              examples:
+                ok:
+                  value:
+                    status: ok
+                    redis_host: localhost
+
+  /memories:ingest:
+    post:
+      tags:
+        - Memories
+        - Agentforce Actions
+      description: Accepts a memory text with an optional type label and ingests it into the vector index.
+      operationId: ingestMemory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngestRequest"
+            examples:
+              basic:
+                summary: Ingest one memory
+                value:
+                  text: Met Alice to discuss Q4 roadmap.
+                  type: semantic
+      responses:
+        "200":
+          description: Ingestion succeeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestResponse"
+              examples:
+                success:
+                  value:
+                    id: memories:f1e788ee61fe410daa8ef941dd166223
+        "400":
+          description: Invalid request (e.g., empty text)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalid:
+                  value:
+                    detail: snippet must be non-empty
+        "500":
+          description: Server-side error while embedding or writing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      x-sfdc:
+        agent:
+          action:
+            publishAsAgentAction: true
+            isUserInput: true
+            isDisplayable: true
+            isPii: true
+
+  /memories:search:
+    get:
+      tags:
+        - Memories
+      description: Performs KNN similarity search over ingested memories.
+      operationId: searchMemories
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: Search query text.
+        - name: k
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 5
+          description: Number of top results to return.
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional type filter (e.g., semantic, episodic).
+      responses:
+        "200":
+          description: Search succeeded
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SearchResponseItem"
+              examples:
+                results:
+                  value:
+                    - type: semantic
+                      created_at: "2024-09-23T00:00:00Z"
+                      snippet: Met Alice to discuss Q4 roadmap.
+                    - type: user
+                      created_at: "2024-09-23T00:00:20Z"
+                      snippet: User prefers concise summaries and dark mode UI.
+        "400":
+          description: Invalid request (e.g., empty query)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalid:
+                  value:
+                    detail: query must be non-empty
+        "500":
+          description: Server-side error while embedding or searching
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        redis_host:
+          type: string
+          nullable: true
+          example: localhost
+
+    IngestRequest:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          description: Memory snippet text to ingest.
+          minLength: 1
+        type:
+          type: string
+          description: Optional classification label.
+          default: generic
+
+    IngestResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          description: Created memory id/key.
+          example: memories:f1e788ee61fe410daa8ef941dd166223
+
+    SearchResponseItem:
+      type: object
+      properties:
+        type:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          nullable: true
+          format: date-time
+          description: Date time for when the memory was created/ingested.
+          example: "2024-09-23T00:00:00Z"
+        snippet:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          description: Error detail message or structure returned by the server.
+          oneOf:
+            - type: string
+            - type: object

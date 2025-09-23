@@ -1,0 +1,24 @@
+{
+  "name": "Mem-DC-Redis",
+  "description": "This is a Python application that can be used to ingest memories into the Mem-Data-Cloud.",
+  "repository": "https://github.com/anunay999/mem-dc-redis",
+  "keywords": [
+    "python",
+    "openapi",
+    "agentforce",
+    "redis"
+  ],
+  "addons": [
+    {
+      "plan": "heroku-applink"
+    }
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/heroku-applink-service-mesh"
+    },
+    {
+      "url": "heroku/python"
+    }
+  ]
+}
