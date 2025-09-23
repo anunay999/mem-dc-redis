@@ -1,0 +1,16 @@
+[project]
+dependencies = [
+  "pandas>=2.3.2",
+  "pydantic>=2.11.9",
+  "pydantic-settings>=2.10.1",
+  "python-dotenv>=1.1.1",
+  "redis>=5.0.0",
+  "requests>=2.32.5",
+  "numpy>=1.26.0",
+  "sentence-transformers>=3.0.1",
+]
+description = "Add your description here"
+name = "mem-dc-redis"
+readme = "README.md"
+requires-python = ">=3.10"
+version = "0.1.0"
