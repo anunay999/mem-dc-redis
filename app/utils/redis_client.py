@@ -43,7 +43,7 @@ redis_vector_store = RedisVectorStore(
         redis_url=_build_redis_url(),
         metadata_schema=[
             {"name": "type", "type": "tag"},
-            {"name": "created_at", "type": "string"},
+            {"name": "created_at", "type": "text"},
         ],
     ),
 )
