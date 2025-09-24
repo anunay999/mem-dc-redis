@@ -8,11 +8,10 @@ from pydantic import BaseModel, Field
 class CreateMemoryRequest(BaseModel):
     text: str = Field(..., min_length=1, description="Memory snippet text")
     type: str = Field(default="generic", description="Memory classification label")
-    userId: Optional[str] = Field(default=None, description="Optional userId to associate with this memory")
-
 
 class CreateMemoryResponse(BaseModel):
-    id: str = Field(..., description="Created memory id/key")
+    dc_status: str = Field(..., description="Data Cloud status")
+    redis_status: str = Field(..., description="Redis status")
 
 
 class SearchResponseItem(BaseModel):

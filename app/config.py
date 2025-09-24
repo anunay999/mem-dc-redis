@@ -17,12 +17,16 @@ class Settings(BaseSettings):
     client_secret: Optional[str] = Field(default=None, alias="CLIENT_SECRET")
 
     # Redis
+    redis_url: Optional[str] = Field(default=None, alias="REDIS_URL")
     redis_host: Optional[str] = Field(default=None, alias="REDIS_HOST")
     redis_port: int = Field(default=6379, alias="REDIS_PORT")
     redis_username: Optional[str] = Field(default=None, alias="REDIS_USERNAME")
     redis_password: Optional[str] = Field(default=None, alias="REDIS_PASSWORD")
     
     google_api_key: Optional[str] = Field(default=None, alias="GOOGLE_API_KEY")
+
+    dc_connector: Optional[str] = Field(default=None, alias="DC_INGEST_CONNECTOR")
+    dc_dlo: Optional[str] = Field(default=None, alias="DC_DLO")
 
     model_config = SettingsConfigDict(
         env_file=".env",
