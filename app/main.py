@@ -17,6 +17,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         default="generic",
         help="Type of memory (e.g., semantic, episodic, etc.)",
     )
+    ingest_parser.add_argument(
+        "--user-id",
+        dest="user_id",
+        type=str,
+        default=None,
+        help="Optional userId to associate with this memory",
+    )
 
     search_parser = subparsers.add_parser("search", help="Search memories with KNN")
     search_parser.add_argument("query", type=str, help="Search query text")
@@ -32,7 +39,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "ingest":
-        key = ingest_memory(snippet=args.snippet, memory_type=args.memory_type)
+        key = ingest_memory(snippet=args.snippet, memory_type=args.memory_type, user_id=args.user_id)
         print(key)
         return 0
     if args.command == "search":

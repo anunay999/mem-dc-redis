@@ -42,8 +42,10 @@ redis_vector_store = RedisVectorStore(
         index_name="memories",
         redis_url=_build_redis_url(),
         metadata_schema=[
+            {"name": "id", "type": "tag"},
             {"name": "type", "type": "tag"},
             {"name": "created_at", "type": "text"},
+            {"name": "userId", "type": "tag"},
         ],
     ),
 )

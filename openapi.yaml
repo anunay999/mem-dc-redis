@@ -11,7 +11,7 @@ components:
   schemas:
     Memory:
       type: object
-      required: [id, text, type, created_at]
+      required: [id, text, type, created_at, userId]
       properties:
         id:
           type: string
@@ -28,5 +28,9 @@ components:
         created_at:
           type: string
           format: date-time
-          description: Unix epoch seconds for when the memory was created/ingested.
-          example: 1727049600
+          description: ISO-8601 timestamp for when the memory was created/ingested.
+          example: 2025-09-24T12:34:56Z
+        userId:
+          type: string
+          description: Identifier of the user associated with this memory.
+          example: 005xx000001Sv6dAAC
