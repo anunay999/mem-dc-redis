@@ -6,27 +6,11 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from config import get_settings
-from vector_store import ingest_memory, search_memories
+from vector_store import create_memory, search_memories
+from schemas import IngestRequest, IngestResponse, SearchResponseItem, HealthResponse
 
 
-class IngestRequest(BaseModel):
-    text: str = Field(..., min_length=1, description="Memory snippet text")
-    type: str = Field(default="generic", description="Memory classification label")
-
-
-class IngestResponse(BaseModel):
-    id: str = Field(..., description="Created memory id/key")
-
-
-class SearchResponseItem(BaseModel):
-    type: Optional[str] = Field(default=None)
-    created_at: Optional[str] = Field(default=None)
-    snippet: str
-
-
-class HealthResponse(BaseModel):
-    status: str
-    redis_host: Optional[str]
+## Models are now centralized in schemas.py
 
 
 app = FastAPI(title="Memory DC Redis API", version="0.1.0")
@@ -41,7 +25,7 @@ def health() -> HealthResponse:
 @app.post("/memories:ingest", response_model=IngestResponse)
 def ingest(req: IngestRequest) -> IngestResponse:
     try:
-        key = ingest_memory(snippet=req.text, memory_type=req.type)
+        key = create_memory(snippet=req.text, memory_type=req.type, user_id=req.userId)
         if not key:
             raise HTTPException(status_code=500, detail="Failed to create memory")
         return IngestResponse(id=key)

@@ -1,7 +1,7 @@
 import argparse
 from typing import Optional
 
-from vector_store import ingest_memory, search_memories
+from vector_store import create_memory, search_memories
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -39,7 +39,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "ingest":
-        key = ingest_memory(snippet=args.snippet, memory_type=args.memory_type, user_id=args.user_id)
+        key = create_memory(snippet=args.snippet, memory_type=args.memory_type, user_id=args.user_id)
         print(key)
         return 0
     if args.command == "search":

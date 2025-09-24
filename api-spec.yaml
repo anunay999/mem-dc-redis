@@ -26,39 +26,19 @@ tags:
     description: Endpoints for ingesting and searching memories
 
 paths:
-  /health:
-    get:
-      tags:
-        - Health
-      summary: Health check
-      description: Returns API health status and configured Redis host.
-      operationId: getHealth
-      responses:
-        "200":
-          description: Service is healthy
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthResponse"
-              examples:
-                ok:
-                  value:
-                    status: ok
-                    redis_host: localhost
-
   /memories:ingest:
     post:
       tags:
         - Memories
         - Agentforce Actions
       description: Accepts a memory text with an optional type label and ingests it into the vector index.
-      operationId: ingestMemory
+      operationId: createMemory
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/IngestRequest"
+              $ref: "#/components/schemas/CreateMemoryRequest"
             examples:
               basic:
                 summary: Ingest one memory
@@ -71,7 +51,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/IngestResponse"
+                $ref: "#/components/schemas/CreateMemoryResponse"
               examples:
                 success:
                   value:
@@ -177,7 +157,7 @@ components:
           nullable: true
           example: localhost
 
-    IngestRequest:
+    CreateMemoryRequest:
       type: object
       required:
         - text
@@ -191,7 +171,7 @@ components:
           description: Optional classification label.
           default: generic
 
-    IngestResponse:
+    CreateMemoryResponse:
       type: object
       required:
         - id
