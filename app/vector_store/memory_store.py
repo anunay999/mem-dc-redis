@@ -67,15 +67,14 @@ def search_memories(query: str, k: int = 5, memory_type: Optional[str] = None) -
         k,
         memory_type or "<any>",
     )
-    if memory_type:
-        from redisvl.query.filter import Tag
 
-        docs = redis_vector_store.similarity_search(query, k=k, filter=Tag("type") == memory_type)
-    else:
-        docs = redis_vector_store.similarity_search(query, k=k)
+    docs = redis_vector_store.similarity_search(query, k=k)
+
+    logger.info(f"Search results: {docs}")
 
     results: List[SearchResponseItem] = []
     for d in docs:
+        logger.info(f"Search result: {d}")
         results.append(
             SearchResponseItem(
                 id=d.metadata.get("id") if isinstance(d.metadata, dict) else None,
@@ -83,6 +82,7 @@ def search_memories(query: str, k: int = 5, memory_type: Optional[str] = None) -
                 created_at=d.metadata.get("created_at") if isinstance(d.metadata, dict) else None,
                 userId=d.metadata.get("userId") if isinstance(d.metadata, dict) else None,
                 snippet=d.page_content,
+                score=d.score,
             )
         )
     return results

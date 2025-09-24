@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     client_secret: Optional[str] = Field(default=None, alias="CLIENT_SECRET")
 
     # Redis
-    redis_url: Optional[str] = Field(default=None, alias="REDIS_URL")
+    redis_url: Optional[str] = Field(default=None, alias="REDISCLOUD_URL")
     redis_host: Optional[str] = Field(default=None, alias="REDIS_HOST")
     redis_port: int = Field(default=6379, alias="REDIS_PORT")
     redis_username: Optional[str] = Field(default=None, alias="REDIS_USERNAME")

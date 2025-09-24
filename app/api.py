@@ -49,7 +49,7 @@ def create(req: CreateMemoryRequest) -> CreateMemoryResponse:
 @app.get("/memories:search", response_model=List[SearchResponseItem])
 def search(
     query: str = Query(..., min_length=1, description="Search query text"),
-    k: int = Query(5, ge=1, le=100, description="Top K results"),
+    k: int = Query(5, ge=1, le=20, description="Top K results"),
     type: Optional[str] = Query(None, description="Optional type filter"),
 ) -> List[SearchResponseItem]:
     try:

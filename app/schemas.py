@@ -20,6 +20,7 @@ class SearchResponseItem(BaseModel):
     created_at: Optional[str] = Field(default=None)
     userId: Optional[str] = Field(default=None)
     snippet: str
+    score: float
 
 
 class HealthResponse(BaseModel):
