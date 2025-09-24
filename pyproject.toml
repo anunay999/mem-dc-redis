@@ -9,8 +9,7 @@ dependencies = [
   "numpy>=1.26.0",
   "langchain-google-genai>=2.1.12",
   "langchain-redis>=0.2.3",
-  "fastapi>=0.115.0",
-  "uvicorn>=0.30.0",
+  "fastapi[standard]>=0.117.1",
 ]
 description = "Add your description here"
 name = "mem-dc-redis"
