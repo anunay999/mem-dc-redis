@@ -5,11 +5,11 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional, Tuple
 
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_redis import RedisConfig, RedisVectorStore
-from langchain.docstore.document import Document
+from langchain_core.documents import Document
 from redisvl.query.filter import Tag
 
 from config import get_settings
