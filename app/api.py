@@ -20,9 +20,8 @@ logger = logging.getLogger(__name__)
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    settings = get_settings()
     logger.info("/health requested")
-    return HealthResponse(status="ok", redis_host=settings.redis_host)
+    return HealthResponse(status="ok")
 
 
 @app.post("/memories:create", response_model=CreateMemoryResponse)

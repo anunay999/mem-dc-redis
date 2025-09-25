@@ -3,11 +3,9 @@ from __future__ import annotations
 from typing import Optional, List, Dict, Any
 
 from config import get_settings
-from utils.redis_client import redis_vector_store
+from services import get_redis_memory_service, get_datacloud_service
 from schemas import SearchResponseItem
 from utils.sf_auth_client import AuthResult, SalesforceAuthClient
-import requests as _requests
-import uuid as _uuid
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,7 +37,8 @@ def create_memory(snippet: str, memory_type: str = "generic") -> Dict[str, Any]:
             }
         ]
     }
-    dc_response = ingest_memory_to_datacloud(payload, settings.dc_connector, settings.dc_dlo, token)
+    datacloud_service = get_datacloud_service()
+    dc_response = datacloud_service.ingest_memory(payload, settings.dc_connector, settings.dc_dlo, token)
 
     logger.info(f"DC response: {dc_response}")
     logger.info(f"Redis response: {mem_id}")
@@ -68,13 +67,15 @@ def search_memories(query: str, k: int = 5, memory_type: Optional[str] = None) -
         memory_type or "<any>",
     )
 
-    docs = redis_vector_store.similarity_search(query, k=k)
+    # Use Redis Memory Service for search
+    redis_service = get_redis_memory_service()
+    docs = redis_service.search_memories(query, k=k)
 
-    logger.info(f"Search results: {docs}")
+    logger.info(f"Search results with scores: {len(docs)} results")
 
     results: List[SearchResponseItem] = []
-    for d in docs:
-        logger.info(f"Search result: {d}")
+    for d, score in docs:
+        logger.info(f"Search result: {d.page_content[:50]}... (score: {score:.4f})")
         results.append(
             SearchResponseItem(
                 id=d.metadata.get("id") if isinstance(d.metadata, dict) else None,
@@ -82,91 +83,88 @@ def search_memories(query: str, k: int = 5, memory_type: Optional[str] = None) -
                 created_at=d.metadata.get("created_at") if isinstance(d.metadata, dict) else None,
                 userId=d.metadata.get("userId") if isinstance(d.metadata, dict) else None,
                 snippet=d.page_content,
-                score=d.score,
+                score=score,
             )
         )
     return results
 
-def ingest_memory_to_redis(snippet: str, memory_type: str = "generic", user_id: str | None = None) -> str:
-    if not snippet or not snippet.strip():
-        raise ValueError("snippet must be non-empty")
-    from datetime import datetime, timezone
+def search_memories_dc(query: str, user_id: str = None, limit: int = 5) -> List[Dict[str, Any]]:
+    """Search for memories in Data Cloud using vector search.
 
-    mem_id = f"memories:{_uuid.uuid4().hex}"
+    Args:
+        query: Search query text
+        user_id: User ID for filtering (currently not used in SQL but logged)
+        limit: Maximum number of results to return
+
+    Returns:
+        List of dictionaries containing search results from Data Cloud
+
+    Raises:
+        ValueError: If query is empty
+        Exception: If authentication or Data Cloud request fails
+    """
+    if not query or not query.strip():
+        raise ValueError("query must be non-empty")
+
     logger.info(
-        "Adding text to Redis vector store: id=%s type=%s userId_set=%s",
-        mem_id,
+        "Searching Data Cloud memories: query_len=%s user_id=%s limit=%s",
+        len(query),
+        user_id or "<any>",
+        limit
+    )
+
+    try:
+        # Get Salesforce authentication token
+        client = SalesforceAuthClient()
+        logger.info("Fetching Salesforce tokens for Data Cloud search")
+        token = client.get_token()
+
+        # Use DataCloud service for search
+        datacloud_service = get_datacloud_service()
+        dc_response = datacloud_service.search_relevant_memories(
+            user_id=user_id or "unknown",
+            utterance=query,
+            limit=limit,
+            token=token
+        )
+
+        logger.info("Data Cloud search completed successfully")
+
+        # Parse and structure the response
+        results = []
+        if isinstance(dc_response, dict) and "data" in dc_response:
+            for row in dc_response.get("data", []):
+                result = {
+                    "record_id": row.get("RecordId__c"),
+                    "score": row.get("score__c"),
+                    "chunk": row.get("Chunk__c"),
+                    "source_value": row.get("value__c")
+                }
+                results.append(result)
+                logger.debug(f"Data Cloud result: score={result['score']} chunk={str(result['chunk'])[:50]}...")
+
+        logger.info(f"Data Cloud search returned {len(results)} results")
+        return results
+
+    except Exception as e:
+        logger.error("Data Cloud search failed: %s", str(e))
+        raise Exception(f"Data Cloud search error: {str(e)}")
+
+def ingest_memory_to_redis(snippet: str, memory_type: str = "generic", user_id: str | None = None) -> str:
+    """Ingest memory using Redis Memory Service."""
+    logger.info(
+        "Adding memory via Redis Memory Service: type=%s userId_set=%s",
         memory_type,
         bool(user_id),
     )
-    ids = redis_vector_store.add_texts(
-        [snippet],
-        [
-            {
-                "id": mem_id,
-                "type": memory_type,
-                "created_at": str(datetime.now(timezone.utc)),
-                "userId": user_id or "unknown",
-            }
-        ],
-    )
-    logger.info(f"Added to Redis with {ids[0] if ids else 'no ids'}")
-    return ids[0] if ids else ""
+    redis_service = get_redis_memory_service()
+    return redis_service.add_memory(snippet, memory_type, user_id)
 
 def ingest_memory_to_datacloud(data: Dict[str, Any], connector: str, dlo: str, token: AuthResult) -> Dict[str, Any]:
-    """Ingest a memory payload into Data Cloud using Salesforce OAuth token.
+    """Ingest a memory payload into Data Cloud using DataCloudService.
 
-    - Fetches token and instance_url via SalesforceAuthClient
-    - Builds ingestion URL as: https://{instance_url}/api/v1/ingest/sources/{connector}/{dlo}
-    - Posts JSON payload and returns the parsed JSON response
+    This function is kept for backward compatibility.
+    Consider using DataCloudService directly for new code.
     """
-    if not connector or not connector.strip():
-        raise ValueError("connector must be non-empty")
-    if not dlo or not dlo.strip():
-        raise ValueError("dlo must be non-empty")
-    if not token or not token.instance_url:
-        raise ValueError("token must be non-empty")
-
-    # instance_url from token already contains scheme; remove scheme duplication if present
-    # Prefer tenant-scoped URL if available
-    instance = token.dcTenantUrl.rstrip("/")
-    # Ensure we do not double-prefix scheme
-    if instance.startswith("http://") or instance.startswith("https://"):
-        base = instance
-    else:
-        base = f"https://{instance}"
-
-    ingestion_endpoint = "api/v1/ingest/sources"
-    url = f"{base}/{ingestion_endpoint}/{connector.strip()}/{dlo.strip()}"
-
-    # Prefer tenant-scoped token if available
-    bearer_token = token.dcTenantToken
-    headers = {
-        "Authorization": f"Bearer {bearer_token}",
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
-
-    try:
-        logger.info(
-            "POST Data Cloud ingest: url=%s connector=%s dlo=%s using_tenant_token=%s",
-            url,
-            connector,
-            dlo,
-            bool(token.dcTenantToken),
-        )
-        response = _requests.post(url, json=data, headers=headers, timeout=30)
-        logger.info("Data Cloud ingest response: status=%s", response.status_code)
-        response.raise_for_status()
-        # Attempt to return JSON response; if none, return minimal dict
-        try:
-            return response.json()
-        except Exception:
-            return {"status_code": response.status_code, "text": response.text}
-    except _requests.HTTPError as e:  # HTTP status errors
-        status = e.response.status_code if e.response is not None else 0
-        body = e.response.text if e.response is not None else str(e)
-        raise _requests.HTTPError(f"HTTP error {status}: {body}", request=e.request, response=e.response)
-    except _requests.RequestException as e:
-        logger.error("Network error during Data Cloud ingest: %s", str(e))
-        raise _requests.RequestException(f"Network error: {str(e)}")
+    datacloud_service = get_datacloud_service()
+    return datacloud_service.ingest_memory(data, connector, dlo, token)

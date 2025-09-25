@@ -25,6 +25,4 @@ class SearchResponseItem(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
-    redis_host: Optional[str]
-
 
