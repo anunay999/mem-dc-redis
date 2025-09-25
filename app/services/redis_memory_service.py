@@ -10,6 +10,7 @@ from typing import List, Optional, Tuple, Dict, Any
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_redis import RedisConfig, RedisVectorStore
 from langchain.docstore.document import Document
+from redisvl.query.filter import Tag
 
 from config import get_settings
 
@@ -51,6 +52,7 @@ class RedisMemoryService:
                         {"name": "type", "type": "tag"},
                         {"name": "created_at", "type": "text"},
                         {"name": "userId", "type": "tag"},
+                        {"name": "status", "type": "tag"},
                     ],
                 ),
             )
@@ -60,16 +62,18 @@ class RedisMemoryService:
             logger.error("Failed to initialize Redis Memory Service: %s", str(e))
             raise
 
-    def add_memory(self, snippet: str, memory_type: str = "generic", user_id: Optional[str] = None) -> str:
-        """Add a memory to the vector store.
+    def add_memory(self, snippet: str, memory_type: str = "generic", user_id: Optional[str] = None, status: str = "active", memory_id: Optional[str] = None) -> str:
+        """Add or update a memory in the vector store (upsert functionality).
 
         Args:
             snippet: The memory text content
             memory_type: Type/category of the memory
             user_id: User ID associated with the memory
+            status: Status of the memory (e.g., "active", "archived", "deleted")
+            memory_id: Optional specific memory ID. If provided, uses this ID; otherwise generates new UUID
 
         Returns:
-            Generated memory ID
+            Memory ID (provided or generated)
 
         Raises:
             ValueError: If snippet is empty
@@ -81,13 +85,23 @@ class RedisMemoryService:
         if not self._vector_store:
             raise RuntimeError("Vector store not initialized")
 
-        mem_id = f"memories:{uuid.uuid4().hex}"
+        # Use provided memory_id or generate new UUID
+        if memory_id:
+            # Ensure memory_id has proper prefix if not already present
+            if not memory_id.startswith("memories:"):
+                mem_id = f"memories:{memory_id}"
+            else:
+                mem_id = memory_id
+        else:
+            mem_id = f"memories:{uuid.uuid4().hex}"
 
         logger.info(
-            "Adding memory to Redis: id=%s type=%s userId_set=%s",
+            "Adding/updating memory in Redis: id=%s type=%s userId_set=%s status=%s upsert=%s",
             mem_id,
             memory_type,
             bool(user_id),
+            status,
+            bool(memory_id),
         )
 
         metadata = {
@@ -95,6 +109,7 @@ class RedisMemoryService:
             "type": memory_type,
             "created_at": str(datetime.now(timezone.utc)),
             "userId": user_id or "unknown",
+            "status": status,
         }
 
         ids = self._vector_store.add_texts([snippet], [metadata])
@@ -102,12 +117,13 @@ class RedisMemoryService:
 
         return ids[0] if ids else ""
 
-    def search_memories(self, query: str, k: int = 5) -> List[Tuple[Document, float]]:
+    def search_memories(self, query: str, k: int = 5, status: Optional[str] = None) -> List[Tuple[Document, float]]:
         """Search for memories using semantic similarity.
 
         Args:
             query: Search query text
             k: Number of results to return
+            status: Optional status filter (e.g., "active", "archived")
 
         Returns:
             List of (Document, score) tuples
@@ -122,10 +138,15 @@ class RedisMemoryService:
         if not self._vector_store:
             raise RuntimeError("Vector store not initialized")
 
-        logger.info("Searching memories: query_len=%s k=%s", len(query), k)
+        logger.info("Searching memories: query_len=%s k=%s status=%s", len(query), k, status or "<any>")
 
         # TODO: Add memory type filtering when needed
-        results = self._vector_store.similarity_search_with_score(query, k=k)
+        if status:
+            # Use Redis filtering for status-based search
+            filter_condition = Tag("status") == status
+            results = self._vector_store.similarity_search_with_score(query, k=k, filter=filter_condition)
+        else:
+            results = self._vector_store.similarity_search_with_score(query, k=k)
 
         logger.info("Search completed: %s results found", len(results))
         return results

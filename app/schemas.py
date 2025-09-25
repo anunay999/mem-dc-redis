@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 class CreateMemoryRequest(BaseModel):
     text: str = Field(..., min_length=1, description="Memory snippet text")
     type: str = Field(default="generic", description="Memory classification label")
+    memory_id: Optional[str] = Field(default=None, description="Optional memory ID for upsert functionality")
+    status: str = Field(default="active", description="Memory status (e.g., active, archived, deleted)")
 
 class CreateMemoryResponse(BaseModel):
     dc_status: str = Field(..., description="Data Cloud status")
@@ -19,6 +21,7 @@ class SearchResponseItem(BaseModel):
     type: Optional[str] = Field(default=None)
     created_at: Optional[str] = Field(default=None)
     userId: Optional[str] = Field(default=None)
+    status: Optional[str] = Field(default=None)
     snippet: str
     score: float
 

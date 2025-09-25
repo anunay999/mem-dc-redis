@@ -28,11 +28,13 @@ def health() -> HealthResponse:
 def create(req: CreateMemoryRequest) -> CreateMemoryResponse:
     try:
         logger.info(
-            "/memories:create called: text_len=%s type=%s",
+            "/memories:create called: text_len=%s type=%s memory_id=%s status=%s",
             len(req.text) if req.text else 0,
             req.type,
+            req.memory_id or "auto-generated",
+            req.status,
         )
-        response = create_memory(snippet=req.text, memory_type=req.type)
+        response = create_memory(snippet=req.text, memory_type=req.type, memory_id=req.memory_id)
         if not response:
             raise HTTPException(status_code=500, detail="Failed to create memory")
         logger.info("/memories:create success: id=%s", response)
@@ -50,15 +52,17 @@ def search(
     query: str = Query(..., min_length=1, description="Search query text"),
     k: int = Query(5, ge=1, le=20, description="Top K results"),
     type: Optional[str] = Query(None, description="Optional type filter"),
+    status: Optional[str] = Query(None, description="Optional status filter (e.g., active, archived)"),
 ) -> List[SearchResponseItem]:
     try:
         logger.info(
-            "/memories:search called: query_len=%s k=%s type=%s",
+            "/memories:search called: query_len=%s k=%s type=%s status=%s",
             len(query),
             k,
             type or "<any>",
+            status or "<any>",
         )
-        results = search_memories(query=query, k=k, memory_type=type)
+        results = search_memories(query=query, k=k, memory_type=type, status=status)
         logger.info("/memories:search success: results=%s", len(results))
         return results
     except ValueError as ve:
