@@ -10,6 +10,7 @@ dependencies = [
   "langchain-google-genai>=2.1.12",
   "langchain-redis>=0.2.3",
   "fastapi[standard]>=0.117.1",
+  "langchain>=0.3.27",
 ]
 description = "Add your description here"
 name = "mem-dc-redis"
