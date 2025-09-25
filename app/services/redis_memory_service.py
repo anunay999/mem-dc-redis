@@ -145,7 +145,7 @@ class RedisMemoryService:
         # TODO: Add memory type filtering when needed
         if status:
             # Use Redis filtering for status-based search
-            filter_condition = Tag("status") == "active"
+            filter_condition = Tag("status") == status
             logger.info("Filter condition: %s", filter_condition)
             results = self._vector_store.similarity_search_with_score(query, k=k, filter=filter_condition)
         else:
