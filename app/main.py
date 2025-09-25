@@ -42,17 +42,6 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="Optional type filter (e.g., semantic, episodic)",
     )
 
-    search_dc_parser = subparsers.add_parser("search-dc", help="Search memories in Data Cloud")
-    search_dc_parser.add_argument("query", type=str, help="Search query text")
-    search_dc_parser.add_argument("--limit", type=int, default=5, help="Maximum number of results")
-    search_dc_parser.add_argument(
-        "--user-id",
-        dest="user_id",
-        type=str,
-        default=None,
-        help="Optional user ID for filtering results",
-    )
-
     args = parser.parse_args(argv)
 
     if args.command == "create":
@@ -72,12 +61,6 @@ def main(argv: Optional[list[str]] = None) -> int:
         results_dict = [item.model_dump() for item in results]
         import json as _json
         print(_json.dumps(results_dict, indent=2))
-        return 0
-    if args.command == "search-dc":
-        logger.info("CLI search-dc: query_len=%s limit=%s user_id=%s", len(args.query), args.limit, args.user_id or "<any>")
-        results = search_memories_dc(query=args.query, user_id=args.user_id, limit=args.limit)
-        import json as _json
-        print(_json.dumps(results, indent=2))
         return 0
 
     return 0
