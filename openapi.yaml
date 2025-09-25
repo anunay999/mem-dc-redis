@@ -34,3 +34,7 @@ components:
           type: string
           description: Identifier of the user associated with this memory.
           example: 005xx000001Sv6dAAC
+        title:
+          type: string
+          description: Title of the memory.
+          example:s Met Alice to discuss Q4 roadmap.

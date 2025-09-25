@@ -94,7 +94,7 @@ def search_memories(query: str, k: int = 5, memory_type: Optional[str] = None, s
         )
     return results
     
-def ingest_memory_to_redis(text: str, memory_type: str = "generic", user_id: str | None = None, status: str = "active", memory_id: str | None = None) -> str:
+def ingest_memory_to_redis(text: str, memory_type: str = "generic", user_id: str | None = None, status: str = "active", memory_id: str | None = None, title: str | None = None) -> str:
     """Ingest memory using Redis Memory Service."""
     logger.info(
         "Adding memory via Redis Memory Service: type=%s userId_set=%s status=%s memory_id=%s",
@@ -104,7 +104,7 @@ def ingest_memory_to_redis(text: str, memory_type: str = "generic", user_id: str
         memory_id or "auto-generated",
     )
     redis_service = get_redis_memory_service()
-    return redis_service.add_memory(text, memory_type, user_id, status, memory_id)
+    return redis_service.add_memory(text, memory_type, user_id, status, memory_id, title)
 
 def ingest_memory_to_datacloud(data: Dict[str, Any], connector: str, dlo: str, token: AuthResult) -> Dict[str, Any]:
     """Ingest a memory payload into Data Cloud using DataCloudService.
