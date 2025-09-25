@@ -11,7 +11,6 @@ A comprehensive memory management system that provides bi-directional sync betwe
 - 🌐 **Dual Storage**: Automatic sync between Redis vector store and Salesforce Data Cloud
 - 🚀 **FastAPI REST API**: Modern async API with automatic documentation
 - 💻 **CLI Interface**: Command-line tools for memory operations
-- 📈 **Service Architecture**: Clean separation with dedicated service classes
 
 ## Quick Start
 
@@ -66,10 +65,6 @@ CLIENT_ID=your_client_id
 CLIENT_SECRET=your_client_secret
 DC_INGEST_CONNECTOR=your_connector
 DC_DLO=your_dlo
-
-# Data Cloud Search (optional)
-DC_VECTOR_INDEX_DLM=your_vector_index
-DC_CHUNK_DLM=your_chunk_dlm
 ```
 
 ## API Usage
@@ -110,6 +105,7 @@ curl "http://localhost:8000/memories:search?query=weekend&status=active&type=per
 ### API Response Format
 
 **Memory Creation Response:**
+
 ```json
 {
   "dc_status": "success",
@@ -118,6 +114,7 @@ curl "http://localhost:8000/memories:search?query=weekend&status=active&type=per
 ```
 
 **Search Response:**
+
 ```json
 [
   {
@@ -214,31 +211,6 @@ curl "http://localhost:8000/memories:search?query=text&status=active"
 uv run app/main.py search "old notes" --status archived
 ```
 
-## Development
-
-### Running Tests
-
-```bash
-# Run tests
-uv run pytest
-
-# Run with coverage
-uv run pytest --cov=app
-```
-
-### Code Quality
-
-```bash
-# Format code
-uv run ruff format
-
-# Lint code
-uv run ruff check
-
-# Type checking
-uv run mypy app/
-```
-
 ## Health Check
 
 Check system status:
@@ -277,4 +249,4 @@ uv run app/main.py search "test" --verbose
 
 ## License
 
-[Your license here]
+[MIT](LICENSE)
