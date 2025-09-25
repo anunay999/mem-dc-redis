@@ -65,7 +65,7 @@ paths:
               examples:
                 invalid:
                   value:
-                    detail: snippet must be non-empty
+                    detail: text must be non-empty
         "500":
           description: Server-side error while embedding or writing
           content:
@@ -123,10 +123,10 @@ paths:
                   value:
                     - type: semantic
                       created_at: "2024-09-23T00:00:00Z"
-                      snippet: Met Alice to discuss Q4 roadmap.
+                      text: Met Alice to discuss Q4 roadmap.
                     - type: user
                       created_at: "2024-09-23T00:00:20Z"
-                      snippet: User prefers concise summaries and dark mode UI.
+                      text: User prefers concise summaries and dark mode UI.
         "400":
           description: Invalid request (e.g., empty query)
           content:
@@ -164,7 +164,7 @@ components:
       properties:
         text:
           type: string
-          description: Memory snippet text to ingest.
+          description: Memory text text to ingest.
           minLength: 1
         type:
           type: string
@@ -193,7 +193,7 @@ components:
           format: date-time
           description: Date time for when the memory was created/ingested.
           example: "2024-09-23T00:00:00Z"
-        snippet:
+        text:
           type: string
 
     ErrorResponse:

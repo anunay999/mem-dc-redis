@@ -123,7 +123,7 @@ curl "http://localhost:8000/memories:search?query=weekend&status=active&type=per
     "created_at": "2024-01-15T10:30:00Z",
     "userId": "alice",
     "status": "active",
-    "snippet": "Alice loves weekend hiking",
+    "text": "Alice loves weekend hiking",
     "score": 0.95
   }
 ]
@@ -166,7 +166,7 @@ Each memory contains the following metadata:
 - **created_at**: Timestamp of creation
 - **userId**: Associated user identifier
 - **status**: Memory status (active, archived, deleted, etc.)
-- **snippet**: The actual memory text content
+- **text**: The actual memory text content
 - **score**: Similarity score (in search results)
 
 ## Architecture

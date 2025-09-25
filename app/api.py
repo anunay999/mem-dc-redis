@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 import logging
-from pydantic import BaseModel, Field
 
 from config import get_settings
 from vector_store import create_memory, search_memories
@@ -28,13 +27,14 @@ def health() -> HealthResponse:
 def create(req: CreateMemoryRequest) -> CreateMemoryResponse:
     try:
         logger.info(
-            "/memories:create called: text_len=%s type=%s memory_id=%s status=%s",
+            "/memories:create called: text_len=%s type=%s memory_id=%s status=%s title=%s",
             len(req.text) if req.text else 0,
             req.type,
             req.memory_id or "auto-generated",
             req.status,
+            req.title or "auto-generated",
         )
-        response = create_memory(snippet=req.text, memory_type=req.type, memory_id=req.memory_id)
+        response = create_memory(text=req.text, memory_type=req.type, memory_id=req.memory_id, title=req.title)
         if not response:
             raise HTTPException(status_code=500, detail="Failed to create memory")
         logger.info("/memories:create success: id=%s", response)

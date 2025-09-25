@@ -15,7 +15,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     ingest_parser = subparsers.add_parser("create", help="Create a memory")
-    ingest_parser.add_argument("snippet", type=str, help="Memory snippet text")
+    ingest_parser.add_argument("text", type=str, help="Memory text")
     ingest_parser.add_argument(
         "--type",
         dest="memory_type",
@@ -67,14 +67,14 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     if args.command == "create":
         logger.info(
-            "CLI create: snippet_len=%s type=%s user_id_set=%s memory_id=%s status=%s",
-            len(args.snippet),
+            "CLI create: text_len=%s type=%s user_id_set=%s memory_id=%s status=%s",
+            len(args.text),
             args.memory_type,
             bool(args.user_id),
             args.memory_id or "auto-generated",
             args.status,
         )
-        key = create_memory(snippet=args.snippet, memory_type=args.memory_type, memory_id=args.memory_id)
+        key = create_memory(text=args.text, memory_type=args.memory_type, memory_id=args.memory_id)
         print(key)
         return 0
     if args.command == "search":

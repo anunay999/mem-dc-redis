@@ -12,9 +12,9 @@ logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
-def create_memory(snippet: str, memory_type: str = "generic", memory_id: str | None = None) -> Dict[str, Any]:
-    if not snippet or not snippet.strip():
-        raise ValueError("snippet must be non-empty")
+def create_memory(text: str, memory_type: str = "generic", memory_id: str | None = None, title: str | None = None) -> Dict[str, Any]:
+    if not text or not text.strip():
+        raise ValueError("text must be non-empty")
     from datetime import datetime, timezone
 
     client = SalesforceAuthClient()
@@ -24,7 +24,7 @@ def create_memory(snippet: str, memory_type: str = "generic", memory_id: str | N
     logger.info("Ingesting memory to Data Cloud and Redis (upsert: %s)", bool(memory_id))
 
     # Pass memory_id to ingest_memory_to_redis for upsert functionality
-    returned_id = ingest_memory_to_redis(snippet, memory_type, token.userId, "active", memory_id)
+    returned_id = ingest_memory_to_redis(text, memory_type, token.userId, "active", memory_id, title)
     mem_id = returned_id.split("::")[-1]
 
     logger.info(f"Redis response: {mem_id}")
@@ -33,9 +33,10 @@ def create_memory(snippet: str, memory_type: str = "generic", memory_id: str | N
         "data": [
             {
                 "id": mem_id,
-                "text": snippet,
+                "text": text,
                 "userId": token.userId,
                 "created_at": str(datetime.now(timezone.utc)),
+                "title": title,
             }
         ]
     }
@@ -86,13 +87,14 @@ def search_memories(query: str, k: int = 5, memory_type: Optional[str] = None, s
                 created_at=d.metadata.get("created_at") if isinstance(d.metadata, dict) else None,
                 userId=d.metadata.get("userId") if isinstance(d.metadata, dict) else None,
                 status=d.metadata.get("status") if isinstance(d.metadata, dict) else None,
-                snippet=d.page_content,
+                text=d.page_content,
                 score=score,
+                title=d.metadata.get("title") if isinstance(d.metadata, dict) else None,
             )
         )
     return results
     
-def ingest_memory_to_redis(snippet: str, memory_type: str = "generic", user_id: str | None = None, status: str = "active", memory_id: str | None = None) -> str:
+def ingest_memory_to_redis(text: str, memory_type: str = "generic", user_id: str | None = None, status: str = "active", memory_id: str | None = None) -> str:
     """Ingest memory using Redis Memory Service."""
     logger.info(
         "Adding memory via Redis Memory Service: type=%s userId_set=%s status=%s memory_id=%s",
@@ -102,7 +104,7 @@ def ingest_memory_to_redis(snippet: str, memory_type: str = "generic", user_id: 
         memory_id or "auto-generated",
     )
     redis_service = get_redis_memory_service()
-    return redis_service.add_memory(snippet, memory_type, user_id, status, memory_id)
+    return redis_service.add_memory(text, memory_type, user_id, status, memory_id)
 
 def ingest_memory_to_datacloud(data: Dict[str, Any], connector: str, dlo: str, token: AuthResult) -> Dict[str, Any]:
     """Ingest a memory payload into Data Cloud using DataCloudService.

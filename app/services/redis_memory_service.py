@@ -53,6 +53,7 @@ class RedisMemoryService:
                         {"name": "created_at", "type": "text"},
                         {"name": "userId", "type": "tag"},
                         {"name": "status", "type": "tag"},
+                        {"name": "title", "type": "text"},
                     ],
                 ),
             )
@@ -62,11 +63,11 @@ class RedisMemoryService:
             logger.error("Failed to initialize Redis Memory Service: %s", str(e))
             raise
 
-    def add_memory(self, snippet: str, memory_type: str = "generic", user_id: Optional[str] = None, status: str = "active", memory_id: Optional[str] = None) -> str:
+    def add_memory(self, text: str, memory_type: str = "generic", user_id: Optional[str] = None, status: str = "active", memory_id: Optional[str] = None, title: Optional[str] = None) -> str:
         """Add or update a memory in the vector store (upsert functionality).
 
         Args:
-            snippet: The memory text content
+            text: The memory text content
             memory_type: Type/category of the memory
             user_id: User ID associated with the memory
             status: Status of the memory (e.g., "active", "archived", "deleted")
@@ -76,11 +77,11 @@ class RedisMemoryService:
             Memory ID (provided or generated)
 
         Raises:
-            ValueError: If snippet is empty
+            ValueError: If text is empty
             RuntimeError: If vector store is not initialized
         """
-        if not snippet or not snippet.strip():
-            raise ValueError("snippet must be non-empty")
+        if not text or not text.strip():
+            raise ValueError("text must be non-empty")
 
         if not self._vector_store:
             raise RuntimeError("Vector store not initialized")
@@ -96,12 +97,13 @@ class RedisMemoryService:
             mem_id = f"memories:{uuid.uuid4().hex}"
 
         logger.info(
-            "Adding/updating memory in Redis: id=%s type=%s userId_set=%s status=%s upsert=%s",
+            "Adding/updating memory in Redis: id=%s type=%s userId_set=%s status=%s upsert=%s, title=%s",
             mem_id,
             memory_type,
             bool(user_id),
             status,
             bool(memory_id),
+            title
         )
 
         metadata = {
@@ -110,9 +112,10 @@ class RedisMemoryService:
             "created_at": str(datetime.now(timezone.utc)),
             "userId": user_id or "unknown",
             "status": status,
+            "title": title,
         }
 
-        ids = self._vector_store.add_texts([snippet], [metadata])
+        ids = self._vector_store.add_texts([text], [metadata])
         logger.info("Memory added to Redis with ID: %s", ids[0] if ids else "no ids")
 
         return ids[0] if ids else ""
@@ -139,11 +142,11 @@ class RedisMemoryService:
             raise RuntimeError("Vector store not initialized")
 
         logger.info("Searching memories: query_len=%s k=%s status=%s", len(query), k, status or "<any>")
-
         # TODO: Add memory type filtering when needed
         if status:
             # Use Redis filtering for status-based search
-            filter_condition = Tag("status") == status
+            filter_condition = Tag("status") == "active"
+            logger.info("Filter condition: %s", filter_condition)
             results = self._vector_store.similarity_search_with_score(query, k=k, filter=filter_condition)
         else:
             results = self._vector_store.similarity_search_with_score(query, k=k)
