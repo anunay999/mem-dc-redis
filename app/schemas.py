@@ -25,7 +25,7 @@ class SearchResponseItem(BaseModel):
     status: Optional[str] = Field(default=None)
     title: Optional[str] = Field(default=None)
     text: str = Field(..., description="Memory snippet")
-    score: float = Field(..., description="Memory score")
+    score: Optional[float] = Field(default=None, description="Memory score (None for direct ID lookups)")
 
 
 class HealthResponse(BaseModel):

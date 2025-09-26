@@ -4,13 +4,16 @@ A comprehensive memory management system that provides bi-directional sync betwe
 
 ## Features
 
-- 🧠 **Memory Management**: Create, search, and manage memories with metadata
+- 🧠 **Memory Management**: Create, search, retrieve, and delete memories with rich metadata
 - 🔍 **Semantic Search**: Vector-based similarity search using Google Gemini embeddings
-- 📊 **Status Filtering**: Filter memories by status (active, archived, deleted, etc.)
+- 🎯 **Advanced Filtering**: Filter by type, status, and user ID with logical combinations
 - 🔄 **Upsert Operations**: Create new or update existing memories with custom IDs
+- 📋 **CRUD Operations**: Complete Create, Read, Update, Delete functionality via API
+- 🔑 **Flexible ID Handling**: Support for both full IDs and hex-only formats
 - 🌐 **Dual Storage**: Automatic sync between Redis vector store and Salesforce Data Cloud
 - 🚀 **FastAPI REST API**: Modern async API with automatic documentation
 - 💻 **CLI Interface**: Command-line tools for memory operations
+- ✅ **Comprehensive Testing**: Full API integration tests with error handling
 
 ## Quick Start
 
@@ -98,8 +101,28 @@ curl -X POST "http://localhost:8000/memories:create" \
 # Basic search
 curl "http://localhost:8000/memories:search?query=hiking&k=5"
 
-# Search with filters
-curl "http://localhost:8000/memories:search?query=weekend&status=active&type=personal&k=3"
+# Search with single filters
+curl "http://localhost:8000/memories:search?query=weekend&status=active"
+curl "http://localhost:8000/memories:search?query=work&type=task"
+curl "http://localhost:8000/memories:search?query=notes&user_id=alice123"
+
+# Search with multiple filters (logical AND)
+curl "http://localhost:8000/memories:search?query=weekend&status=active&type=personal&user_id=alice123&k=3"
+```
+
+### Get Memory by ID
+
+```bash
+
+# Get memory by ID (prefix automatically handled)
+curl "http://localhost:8000/memories/abc123def456"
+```
+
+### Delete Memory by ID
+
+```bash
+# Delete memory by ID
+curl -X DELETE "http://localhost:8000/memories/abc123def456"
 ```
 
 ### API Response Format
@@ -123,10 +146,35 @@ curl "http://localhost:8000/memories:search?query=weekend&status=active&type=per
     "created_at": "2024-01-15T10:30:00Z",
     "userId": "alice",
     "status": "active",
+    "title": "Alice's Hiking Memory",
     "text": "Alice loves weekend hiking",
     "score": 0.95
   }
 ]
+```
+
+**Get Memory by ID Response:**
+
+```json
+{
+  "id": "memories:abc123...",
+  "type": "personal",
+  "created_at": "2024-01-15T10:30:00Z",
+  "userId": "alice",
+  "status": "active",
+  "title": "Alice's Hiking Memory",
+  "text": "Alice loves weekend hiking",
+  "score": null
+}
+```
+
+**Delete Memory Response:**
+
+```json
+{
+  "message": "Memory 'abc123...' deleted successfully",
+  "deleted": true
+}
 ```
 
 ## CLI Usage
@@ -155,19 +203,45 @@ uv run app/main.py search "weekend" --status active --k 3
 
 # Search specific type
 uv run app/main.py search "work" --type professional
+
+# Search with multiple filters
+uv run app/main.py search "notes" --type task --status active
 ```
+
+## API Endpoints
+
+### Complete REST API Reference
+
+| Method   | Endpoint                | Description                  |
+| -------- | ----------------------- | ---------------------------- |
+| `POST`   | `/memories:create`      | Create or upsert memory      |
+| `GET`    | `/memories:search`      | Search memories with filters |
+| `GET`    | `/memories/{memory_id}` | Get specific memory by ID    |
+| `DELETE` | `/memories/{memory_id}` | Delete memory by ID          |
+| `GET`    | `/health`               | Health check                 |
+
+### Query Parameters for Search
+
+| Parameter | Type    | Description                          | Example                |
+| --------- | ------- | ------------------------------------ | ---------------------- |
+| `query`   | string  | Search query text (required)         | `hiking`               |
+| `k`       | integer | Number of results (1-20, default: 5) | `10`                   |
+| `type`    | string  | Memory type filter                   | `task`, `idea`, `note` |
+| `status`  | string  | Memory status filter                 | `active`, `archived`   |
+| `user_id` | string  | User ID filter                       | `alice123`             |
 
 ## Memory Schema
 
 Each memory contains the following metadata:
 
 - **id**: Unique identifier (auto-generated or custom)
-- **type**: Memory classification (personal, work, hobby, etc.)
+- **type**: Memory classification (personal, work, task, idea, note, etc.)
 - **created_at**: Timestamp of creation
 - **userId**: Associated user identifier
 - **status**: Memory status (active, archived, deleted, etc.)
+- **title**: Optional memory title
 - **text**: The actual memory text content
-- **score**: Similarity score (in search results)
+- **score**: Similarity score (in search results, null for direct ID lookups)
 
 ## Architecture
 
@@ -201,14 +275,27 @@ Memories support flexible status management:
 - **deleted**: Soft-deleted memories, can be filtered out
 - **custom**: Any string value for specialized workflows
 
-### Status Filtering
+### Advanced Filtering
+
+The system supports powerful filtering capabilities with logical AND combinations:
 
 ```bash
-# API: Search only active memories
-curl "http://localhost:8000/memories:search?query=text&status=active"
+# API: Multiple filters (status AND type AND user)
+curl "http://localhost:8000/memories:search?query=project&status=active&type=task&user_id=alice123"
 
-# CLI: Search archived memories
-uv run app/main.py search "old notes" --status archived
+# CLI: Multiple filters
+uv run app/main.py search "meeting" --status active --type note
+```
+
+### Memory Operations by ID
+
+```bash
+# API: Get memory by ID (flexible ID format)
+curl "http://localhost:8000/memories/abc123def456"
+curl "http://localhost:8000/memories/abc123def456"
+
+# API: Delete memory by ID
+curl -X DELETE "http://localhost:8000/memories/abc123def456"
 ```
 
 ## Health Check
@@ -226,6 +313,8 @@ curl http://localhost:8000/health
 1. **Redis Connection Errors**: Ensure Redis Stack is running with vector search enabled
 2. **Google API Errors**: Verify `GOOGLE_API_KEY` is set correctly
 3. **Import Errors**: Run `uv sync` to ensure all dependencies are installed
+4. **Memory Not Found (404)**: Check memory ID format - system accepts both hex and full IDs
+5. **Search Returns No Results**: Verify filters are compatible and memory exists with specified criteria
 
 ### Logs
 
@@ -237,6 +326,21 @@ tail -f logs/api.log
 
 # CLI operations log to stdout
 uv run app/main.py search "test" --verbose
+```
+
+### Manual Testing
+
+```bash
+# Start the API server
+./start-api.sh
+
+# Test in another terminal
+curl -X POST "http://localhost:8000/memories:create" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "Test memory", "type": "test"}'
+
+# Get the returned ID and test retrieval
+curl "http://localhost:8000/memories/{memory_id}"
 ```
 
 ## Contributing

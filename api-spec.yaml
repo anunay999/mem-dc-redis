@@ -108,7 +108,19 @@ paths:
           required: false
           schema:
             type: string
-          description: Optional type filter (e.g., semantic, episodic).
+          description: Optional memory type filter (e.g., task, idea, note, semantic, episodic).
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional status filter (e.g., active, archived, deleted).
+        - name: user_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Optional user ID filter to search memories for a specific user.
       responses:
         "200":
           description: Search succeeded
@@ -139,6 +151,117 @@ paths:
                     detail: query must be non-empty
         "500":
           description: Server-side error while embedding or searching
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /memories/{memory_id}:
+    get:
+      tags:
+        - Memories
+      description: Get a specific memory by its unique identifier.
+      operationId: getMemoryById
+      parameters:
+        - name: memory_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique memory identifier.
+          example: "memories:f1e788ee61fe410daa8ef941dd166223"
+      responses:
+        "200":
+          description: Memory found successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponseItem"
+              examples:
+                found:
+                  value:
+                    id: "memories:f1e788ee61fe410daa8ef941dd166223"
+                    type: "task"
+                    created_at: "2024-09-23T00:00:00Z"
+                    userId: "005xx000001Sv6dAAC"
+                    status: "active"
+                    text: "Implement user authentication system"
+                    title: "Auth System Task"
+                    score: null
+        "400":
+          description: Invalid memory ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalid:
+                  value:
+                    detail: "memory_id must be non-empty"
+        "404":
+          description: Memory not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                not_found:
+                  value:
+                    detail: "Memory with ID 'invalid_id' not found"
+        "500":
+          description: Server-side error while retrieving memory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      tags:
+        - Memories
+      description: Delete a specific memory by its unique identifier.
+      operationId: deleteMemoryById
+      parameters:
+        - name: memory_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique memory identifier.
+          example: "memories:f1e788ee61fe410daa8ef941dd166223"
+      responses:
+        "200":
+          description: Memory deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteMemoryResponse"
+              examples:
+                deleted:
+                  value:
+                    message: "Memory 'memories:f1e788ee61fe410daa8ef941dd166223' deleted successfully"
+                    deleted: true
+        "400":
+          description: Invalid memory ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalid:
+                  value:
+                    detail: "memory_id must be non-empty"
+        "404":
+          description: Memory not found or could not be deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                not_found:
+                  value:
+                    detail: "Memory with ID 'invalid_id' not found or could not be deleted"
+        "500":
+          description: Server-side error while deleting memory
           content:
             application/json:
               schema:
@@ -184,17 +307,62 @@ components:
     SearchResponseItem:
       type: object
       properties:
+        id:
+          type: string
+          nullable: true
+          description: Unique memory identifier
+          example: "memories:f1e788ee61fe410daa8ef941dd166223"
         type:
           type: string
           nullable: true
+          description: Memory type classification
+          example: "task"
         created_at:
           type: string
           nullable: true
           format: date-time
           description: Date time for when the memory was created/ingested.
           example: "2024-09-23T00:00:00Z"
+        userId:
+          type: string
+          nullable: true
+          description: User ID associated with the memory
+          example: "005xx000001Sv6dAAC"
+        status:
+          type: string
+          nullable: true
+          description: Memory status
+          example: "active"
         text:
           type: string
+          description: Memory content
+          example: "Met Alice to discuss Q4 roadmap."
+        title:
+          type: string
+          nullable: true
+          description: Memory title
+          example: "Q4 Planning Meeting"
+        score:
+          type: number
+          format: float
+          nullable: true
+          description: Similarity search score
+          example: 0.85
+
+    DeleteMemoryResponse:
+      type: object
+      required:
+        - message
+        - deleted
+      properties:
+        message:
+          type: string
+          description: Success message describing the deletion
+          example: "Memory 'memories:f1e788ee61fe410daa8ef941dd166223' deleted successfully"
+        deleted:
+          type: boolean
+          description: Whether the deletion was successful
+          example: true
 
     ErrorResponse:
       type: object

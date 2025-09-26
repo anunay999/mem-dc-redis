@@ -60,20 +60,33 @@ def create_memory(text: str, memory_type: str = "generic", memory_id: str | None
     return {"dc_status": dc_status, "redis_status": mem_id}
 
 
-def search_memories(query: str, k: int = 5, memory_type: Optional[str] = None, status: Optional[str] = None) -> List[SearchResponseItem]:
+def search_memories(
+    query: str, 
+    k: int = 5, 
+    memory_type: Optional[str] = None, 
+    status: Optional[str] = None, 
+    user_id: Optional[str] = None
+) -> List[SearchResponseItem]:
     if not query or not query.strip():
         raise ValueError("query must be non-empty")
     logger.info(
-        "Searching memories: query_len=%s k=%s type=%s status=%s",
+        "Searching memories: query_len=%s k=%s type=%s status=%s user_id=%s",
         len(query),
         k,
         memory_type or "<any>",
         status or "<any>",
+        user_id or "<any>",
     )
 
-    # Use Redis Memory Service for search
+    # Use Redis Memory Service for search with enhanced filtering
     redis_service = get_redis_memory_service()
-    docs = redis_service.search_memories(query, k=k, status=status)
+    docs = redis_service.search_memories(
+        query, 
+        k=k, 
+        status=status, 
+        memory_type=memory_type, 
+        user_id=user_id
+    )
 
     logger.info(f"Search results with scores: {len(docs)} results")
 
@@ -106,6 +119,71 @@ def ingest_memory_to_redis(text: str, memory_type: str = "generic", user_id: str
     )
     redis_service = get_redis_memory_service()
     return redis_service.add_memory(text, memory_type, user_id, status, memory_id, title)
+
+def get_memory_by_id(memory_id: str) -> Optional[SearchResponseItem]:
+    """Get a specific memory by ID.
+    
+    Args:
+        memory_id: The memory ID to retrieve
+        
+    Returns:
+        SearchResponseItem if found, None otherwise
+        
+    Raises:
+        ValueError: If memory_id is empty
+    """
+    if not memory_id or not memory_id.strip():
+        raise ValueError("memory_id must be non-empty")
+    
+    logger.info("Getting memory by ID: %s", memory_id)
+    
+    redis_service = get_redis_memory_service()
+    document = redis_service.get_memory_by_id(memory_id)
+    
+    if document:
+        logger.info("Memory found: %s", memory_id)
+        return SearchResponseItem(
+            id=document.metadata.get("id") if isinstance(document.metadata, dict) else None,
+            type=document.metadata.get("type") if isinstance(document.metadata, dict) else None,
+            created_at=document.metadata.get("created_at") if isinstance(document.metadata, dict) else None,
+            userId=document.metadata.get("userId") if isinstance(document.metadata, dict) else None,
+            status=document.metadata.get("status") if isinstance(document.metadata, dict) else None,
+            text=document.page_content,
+            score=None,  # No score for direct ID lookup
+            title=document.metadata.get("title") if isinstance(document.metadata, dict) else None,
+        )
+    else:
+        logger.info("Memory not found: %s", memory_id)
+        return None
+
+
+def delete_memory_by_id(memory_id: str) -> bool:
+    """Delete a specific memory by ID.
+    
+    Args:
+        memory_id: The memory ID to delete
+        
+    Returns:
+        True if deleted successfully, False otherwise
+        
+    Raises:
+        ValueError: If memory_id is empty
+    """
+    if not memory_id or not memory_id.strip():
+        raise ValueError("memory_id must be non-empty")
+    
+    logger.info("Deleting memory by ID: %s", memory_id)
+    
+    redis_service = get_redis_memory_service()
+    success = redis_service.delete_memory(memory_id)
+    
+    if success:
+        logger.info("Memory deleted successfully: %s", memory_id)
+    else:
+        logger.warning("Memory deletion failed: %s", memory_id)
+    
+    return success
+
 
 def ingest_memory_to_datacloud(data: Dict[str, Any], connector: str, dlo: str, token: AuthResult) -> Dict[str, Any]:
     """Ingest a memory payload into Data Cloud using DataCloudService.

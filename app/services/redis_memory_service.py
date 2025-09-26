@@ -89,12 +89,9 @@ class RedisMemoryService:
         # Use provided memory_id or generate new UUID
         if memory_id:
             # Ensure memory_id has proper prefix if not already present
-            if not memory_id.startswith("memories:"):
-                mem_id = f"memories:{memory_id}"
-            else:
-                mem_id = memory_id
+            mem_id = memory_id
         else:
-            mem_id = f"memories:{uuid.uuid4().hex}"
+            mem_id = f"{uuid.uuid4().hex}"
 
         logger.info(
             "Adding/updating memory in Redis: id=%s type=%s userId_set=%s status=%s upsert=%s, title=%s",
@@ -115,18 +112,41 @@ class RedisMemoryService:
             "title": title,
         }
 
-        ids = self._vector_store.add_texts([text], [metadata])
-        logger.info("Memory added to Redis with ID: %s", ids[0] if ids else "no ids")
+        # Check if memory already exists and delete it for proper upsert
+        existing_memory = self._vector_store.get_by_ids([mem_id])
+        if existing_memory:
+            logger.info("Memory already exists in Redis: id=%s, deleting for upsert", mem_id)
+            try:
+                # Delete the existing memory to avoid duplicates
+                self._vector_store.delete([mem_id])
+                logger.info("Successfully deleted existing memory: %s", mem_id)
+            except Exception as e:
+                logger.warning("Failed to delete existing memory %s: %s", mem_id, str(e))
+        else:
+            logger.info("Memory does not exist in Redis: id=%s, creating new", mem_id)
 
-        return ids[0] if ids else ""
+        # Add the memory (this will be a fresh insert after deletion)
+        ids = self._vector_store.add_texts([text], [metadata], ids=[mem_id])
+        logger.info("Memory added/updated in Redis with ID: %s", ids[0] if ids else "no ids")
 
-    def search_memories(self, query: str, k: int = 5, status: Optional[str] = None) -> List[Tuple[Document, float]]:
-        """Search for memories using semantic similarity.
+        return mem_id  # Return the original memory ID
+
+    def search_memories(
+        self, 
+        query: str, 
+        k: int = 5, 
+        status: Optional[str] = None,
+        memory_type: Optional[str] = None,
+        user_id: Optional[str] = None
+    ) -> List[Tuple[Document, float]]:
+        """Search for memories using semantic similarity with optional filtering.
 
         Args:
             query: Search query text
             k: Number of results to return
             status: Optional status filter (e.g., "active", "archived")
+            memory_type: Optional memory type filter (e.g., "note", "task", "idea")
+            user_id: Optional user ID filter
 
         Returns:
             List of (Document, score) tuples
@@ -141,11 +161,33 @@ class RedisMemoryService:
         if not self._vector_store:
             raise RuntimeError("Vector store not initialized")
 
-        logger.info("Searching memories: query_len=%s k=%s status=%s", len(query), k, status or "<any>")
-        # TODO: Add memory type filtering when needed
+        # Build filter conditions
+        filter_conditions = []
+        
         if status:
-            # Use Redis filtering for status-based search
-            filter_condition = Tag("status") == status
+            filter_conditions.append(Tag("status") == status)
+        
+        if memory_type:
+            filter_conditions.append(Tag("type") == memory_type)
+            
+        if user_id:
+            filter_conditions.append(Tag("userId") == user_id)
+
+        logger.info(
+            "Searching memories: query_len=%s k=%s status=%s type=%s userId=%s filters=%s", 
+            len(query), k, status or "<any>", memory_type or "<any>", user_id or "<any>", len(filter_conditions)
+        )
+
+        # Combine filters with logical AND if multiple filters exist
+        if filter_conditions:
+            if len(filter_conditions) == 1:
+                filter_condition = filter_conditions[0]
+            else:
+                # Combine multiple filters with AND operator
+                filter_condition = filter_conditions[0]
+                for condition in filter_conditions[1:]:
+                    filter_condition = filter_condition & condition
+            
             logger.info("Filter condition: %s", filter_condition)
             results = self._vector_store.similarity_search_with_score(query, k=k, filter=filter_condition)
         else:
@@ -162,12 +204,79 @@ class RedisMemoryService:
 
         Returns:
             Document if found, None otherwise
+
+        Raises:
+            RuntimeError: If vector store is not initialized
         """
-        # This would require implementing a direct Redis lookup
-        # For now, we can search with a unique term and filter by ID
-        logger.info("Getting memory by ID: %s", memory_id)
-        # TODO: Implement direct ID lookup if needed
-        return None
+        if not self._vector_store:
+            raise RuntimeError("Vector store not initialized")
+
+        # Extract just the hex part of the ID for Redis lookup
+        if memory_id.startswith("memories:"):
+            # Extract just the hex part if full ID is provided
+            mem_id = memory_id.split(":")[-1]
+        else:
+            # Use the ID as-is (assuming it's the hex part)
+            mem_id = memory_id
+
+        logger.info("Getting memory by ID: %s (original: %s)", mem_id, memory_id)
+        
+        try:
+            # Use get_by_ids to fetch the document directly
+            documents = self._vector_store.get_by_ids([mem_id])
+            if documents and len(documents) > 0:
+                logger.info("Memory found: %s", mem_id)
+                return documents[0]
+            else:
+                logger.info("Memory not found: %s", mem_id)
+                return None
+        except Exception as e:
+            logger.error("Error retrieving memory %s: %s", mem_id, str(e))
+            return None
+
+    def delete_memory(self, memory_id: str) -> bool:
+        """Delete a specific memory by ID.
+
+        Args:
+            memory_id: The memory ID to delete
+
+        Returns:
+            True if deleted successfully, False otherwise
+
+        Raises:
+            RuntimeError: If vector store is not initialized
+        """
+        if not self._vector_store:
+            raise RuntimeError("Vector store not initialized")
+
+        # Extract just the hex part of the ID for Redis lookup
+        if memory_id.startswith("memories:"):
+            # Extract just the hex part if full ID is provided
+            mem_id = memory_id.split(":")[-1]
+        else:
+            # Use the ID as-is (assuming it's the hex part)
+            mem_id = memory_id
+
+        logger.info("Deleting memory by ID: %s (original: %s)", mem_id, memory_id)
+        
+        try:
+            # Check if memory exists first
+            existing_memory = self._vector_store.get_by_ids([mem_id])
+            if not existing_memory:
+                logger.info("Memory not found for deletion: %s", mem_id)
+                return False
+
+            # Delete the memory
+            result = self._vector_store.delete([mem_id])
+            if result:
+                logger.info("Memory deleted successfully: %s", mem_id)
+                return True
+            else:
+                logger.warning("Memory deletion failed: %s", mem_id)
+                return False
+        except Exception as e:
+            logger.error("Error deleting memory %s: %s", mem_id, str(e))
+            return False
 
     @property
     def is_initialized(self) -> bool:
