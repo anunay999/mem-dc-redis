@@ -30,11 +30,11 @@ def create(req: CreateMemoryRequest) -> CreateMemoryResponse:
             "/memories:create called: text_len=%s type=%s memory_id=%s status=%s title=%s",
             len(req.text) if req.text else 0,
             req.type,
-            req.memory_id or "auto-generated",
+            req.memory_id,
             req.status,
-            req.title or "auto-generated",
+            req.title,
         )
-        response = create_memory(text=req.text, memory_type=req.type, memory_id=req.memory_id, title=req.title)
+        response = create_memory(text=req.text, memory_type=req.type, memory_id=req.memory_id, title=req.title, status=req.status)
         if not response:
             raise HTTPException(status_code=500, detail="Failed to create memory")
         logger.info("/memories:create success: id=%s", response)
