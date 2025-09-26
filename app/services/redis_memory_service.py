@@ -63,7 +63,7 @@ class RedisMemoryService:
             logger.error("Failed to initialize Redis Memory Service: %s", str(e))
             raise
 
-    def add_memory(self, text: str, memory_type: str = "generic", user_id: Optional[str] = None, status: str = "active", memory_id: Optional[str] = None, title: Optional[str] = None) -> str:
+    def add_memory(self, text: str, memory_type: str = "generic", user_id: Optional[str] = None, status: Optional[str] = None, memory_id: Optional[str] = None, title: Optional[str] = None) -> str:
         """Add or update a memory in the vector store (upsert functionality).
 
         Args:

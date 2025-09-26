@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
-def create_memory(text: str, memory_type: str = "generic", memory_id: str | None = None, title: str | None = None) -> Dict[str, Any]:
+def create_memory(text: str, memory_type: str = "generic", status: Optional[str] = None, memory_id: str | None = None, title: str | None = None) -> Dict[str, Any]:
     if not text or not text.strip():
         raise ValueError("text must be non-empty")
     from datetime import datetime, timezone
@@ -24,7 +24,7 @@ def create_memory(text: str, memory_type: str = "generic", memory_id: str | None
     logger.info("Ingesting memory to Data Cloud and Redis (upsert: %s)", bool(memory_id))
 
     # Pass memory_id to ingest_memory_to_redis for upsert functionality
-    returned_id = ingest_memory_to_redis(text, memory_type, token.userId, "active", memory_id, title)
+    returned_id = ingest_memory_to_redis(text, memory_type, token.userId, status, memory_id, title)
     mem_id = returned_id.split("::")[-1]
 
     logger.info(f"Redis response: {mem_id}")

@@ -9,7 +9,7 @@ class CreateMemoryRequest(BaseModel):
     text: str = Field(..., min_length=1, description="Memory text")
     type: str = Field(default="generic", description="Memory classification label")
     memory_id: Optional[str] = Field(default=None, description="Optional memory ID for upsert functionality")
-    status: str = Field(default="active", description="Memory status (e.g., active, archived, deleted)")
+    status: str = Field(description="Memory status (e.g., active, archived, deleted)")
     title: Optional[str] = Field(default=None, description="Memory title")
 
 class CreateMemoryResponse(BaseModel):

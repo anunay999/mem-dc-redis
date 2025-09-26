@@ -41,7 +41,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         "--status",
         dest="status",
         type=str,
-        default="active",
+        default=None,
         help="Memory status (e.g., active, archived, deleted)",
     )
 
