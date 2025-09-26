@@ -165,7 +165,21 @@ class RedisMemoryService:
         filter_conditions = []
         
         if status:
-            filter_conditions.append(Tag("status") == status)
+            # Support multiple status values separated by comma (OR logic)
+            if ',' in status:
+                status_values = [s.strip() for s in status.split(',')]
+                # Create OR condition for multiple status values
+                status_filters = [Tag("status") == s for s in status_values]
+                if len(status_filters) == 1:
+                    status_condition = status_filters[0]
+                else:
+                    status_condition = status_filters[0]
+                    for sf in status_filters[1:]:
+                        status_condition = status_condition | sf
+                filter_conditions.append(status_condition)
+            else:
+                # Single status value
+                filter_conditions.append(Tag("status") == status)
         
         if memory_type:
             filter_conditions.append(Tag("type") == memory_type)

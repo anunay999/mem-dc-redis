@@ -106,8 +106,15 @@ curl "http://localhost:8000/memories:search?query=weekend&status=active"
 curl "http://localhost:8000/memories:search?query=work&type=task"
 curl "http://localhost:8000/memories:search?query=notes&user_id=alice123"
 
-# Search with multiple filters (logical AND)
+# Search with OR status filter (multiple status values)
+curl "http://localhost:8000/memories:search?query=project&status=active,consolidated"
+curl "http://localhost:8000/memories:search?query=tasks&status=active,consolidated,archived"
+
+# Search with multiple filters (logical AND between different filter types)
 curl "http://localhost:8000/memories:search?query=weekend&status=active&type=personal&user_id=alice123&k=3"
+
+# Combine OR status with other filters
+curl "http://localhost:8000/memories:search?query=work&type=task&status=active,consolidated"
 ```
 
 ### Get Memory by ID
@@ -222,13 +229,13 @@ uv run app/main.py search "notes" --type task --status active
 
 ### Query Parameters for Search
 
-| Parameter | Type    | Description                          | Example                |
-| --------- | ------- | ------------------------------------ | ---------------------- |
-| `query`   | string  | Search query text (required)         | `hiking`               |
-| `k`       | integer | Number of results (1-20, default: 5) | `10`                   |
-| `type`    | string  | Memory type filter                   | `task`, `idea`, `note` |
-| `status`  | string  | Memory status filter                 | `active`, `archived`   |
-| `user_id` | string  | User ID filter                       | `alice123`             |
+| Parameter | Type    | Description                                              | Example                                                  |
+| --------- | ------- | -------------------------------------------------------- | -------------------------------------------------------- |
+| `query`   | string  | Search query text (required)                             | `hiking`                                                 |
+| `k`       | integer | Number of results (1-20, default: 5)                     | `10`                                                     |
+| `type`    | string  | Memory type filter                                       | `task`, `idea`, `note`                                   |
+| `status`  | string  | Memory status filter (supports OR with comma separation) | `active`, `active,consolidated`, `active,archived,draft` |
+| `user_id` | string  | User ID filter                                           | `alice123`                                               |
 
 ## Memory Schema
 
@@ -282,6 +289,12 @@ The system supports powerful filtering capabilities with logical AND combination
 ```bash
 # API: Multiple filters (status AND type AND user)
 curl "http://localhost:8000/memories:search?query=project&status=active&type=task&user_id=alice123"
+
+# API: OR status filtering (status=active OR consolidated)
+curl "http://localhost:8000/memories:search?query=project&status=active,consolidated"
+
+# API: Complex combination (type=task AND (status=active OR consolidated))
+curl "http://localhost:8000/memories:search?query=work&type=task&status=active,consolidated"
 
 # CLI: Multiple filters
 uv run app/main.py search "meeting" --status active --type note

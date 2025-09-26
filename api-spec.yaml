@@ -114,7 +114,7 @@ paths:
           required: false
           schema:
             type: string
-          description: Optional status filter (e.g., active, archived, deleted).
+          description: Optional status filter. Supports single values (e.g., "active") or multiple values with OR logic using comma separation (e.g., "active,consolidated,archived").
         - name: user_id
           in: query
           required: false
