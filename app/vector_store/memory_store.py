@@ -94,14 +94,15 @@ def search_memories(query: str, k: int = 5, memory_type: Optional[str] = None, s
         )
     return results
     
-def ingest_memory_to_redis(text: str, memory_type: str = "generic", user_id: str | None = None, status: str = "active", memory_id: str | None = None, title: str | None = None) -> str:
+def ingest_memory_to_redis(text: str, memory_type: str = "generic", user_id: str | None = None, status: str | None = None, memory_id: str | None = None, title: str | None = None) -> str:
     """Ingest memory using Redis Memory Service."""
     logger.info(
-        "Adding memory via Redis Memory Service: type=%s userId_set=%s status=%s memory_id=%s",
+        "Adding memory via Redis Memory Service: type=%s userId_set=%s status=%s memory_id=%s title=%s",
         memory_type,
         bool(user_id),
         status,
-        memory_id or "auto-generated",
+        memory_id,
+        title,
     )
     redis_service = get_redis_memory_service()
     return redis_service.add_memory(text, memory_type, user_id, status, memory_id, title)
